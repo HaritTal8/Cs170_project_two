@@ -70,3 +70,42 @@ class FeatureSearcher:
         
         print(f"Search finished! The best subset of features is {{{','.join(map(str, sorted(best_overall_features)))}}}, which has an accuracy of {best_overall_accuracy:.1%}")
         return best_overall_features, best_overall_accuracy
+    
+    #backwards elimination:
+    
+    def backward_elimination(self) -> Tuple[Set[int], float]:
+        """Implement Backward Elimination algorithm"""
+        print("Starting with all features and \"random\" evaluation, I get an accuracy of")
+        current_features = set(range(1, self.num_features + 1))
+        baseline_accuracy = self.evaluation_function(current_features)
+        print(f"{baseline_accuracy:.1%} Beginning search.\n")
+        
+        best_overall_features = current_features.copy()
+        best_overall_accuracy = baseline_accuracy
+        
+        while len(current_features) > 1:
+            best_feature_to_remove = None
+            best_accuracy = -1
+            
+            #try removing each feature
+            for feature in current_features:
+                test_features = current_features - {feature}
+                accuracy = self.evaluation_function(test_features)
+                print(f"Using feature(s) {{{','.join(map(str, sorted(test_features)))}}} accuracy is {accuracy:.1%}")
+                
+                if accuracy > best_accuracy:
+                    best_accuracy = accuracy
+                    best_feature_to_remove = feature
+            
+            #check if removing the feature improves accuracy
+            if best_accuracy > best_overall_accuracy:
+                current_features.remove(best_feature_to_remove)
+                best_overall_features = current_features.copy()
+                best_overall_accuracy = best_accuracy
+                print(f"Feature set {{{','.join(map(str, sorted(current_features)))}}} was best, accuracy is {best_accuracy:.1%}\n")
+            else:
+                print("(Warning: Decreased accuracy!)")
+                break
+        
+        print(f"Search finished! The best subset of features is {{{','.join(map(str, sorted(best_overall_features)))}}}, which has an accuracy of {best_overall_accuracy:.1%}")
+        return best_overall_features, best_overall_accuracy
