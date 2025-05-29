@@ -129,33 +129,125 @@ class LeaveOneOutValidator:
         return correct_predictions / self.num_instances
 
 
-def main(): #main entry point for feature selection program
-    #number of features from user
-    try:
-        num_features = int(input("Please enter total number of features: "))
-        if num_features <= 0:
-            print("Number of features must be positive!")
-            return
-    except ValueError:
-        print("Please enter a valid number!")
+def test_classifier():
+   """Test the classifier and validator on provided datasets"""
+   print("Testing classifier and validator...")
+   
+   # Test small dataset
+   print("\nTesting small dataset with features {3, 5, 7}:")
+   try:
+       features, labels = load_dataset('small_dataset.txt')
+       features = normalize_features(features)
+       
+       validator = LeaveOneOutValidator(features, labels)
+       classifier = NearestNeighborClassifier()
+       
+       accuracy = validator.validate({3, 5, 7}, classifier)
+       print(f"Accuracy: {accuracy:.3f} (Expected: ~0.89)")
+       
+       if abs(accuracy - 0.89) < 0.05:
+           print("Test PASSED - Accuracy within expected range")
+       else:
+           print("Test result differs from expected value")
+           
+   except FileNotFoundError:
+       print("Small dataset not found. Please ensure small_dataset.txt exists.")
+   except Exception as e:
+       print(f"Error testing small dataset: {e}")
+   
+   # Test large dataset
+   print("\nTesting large dataset with features {1, 15, 27}:")
+   try:
+       features, labels = load_dataset('large_dataset.txt')
+       features = normalize_features(features)
+       
+       validator = LeaveOneOutValidator(features, labels)
+       classifier = NearestNeighborClassifier()
+       
+       accuracy = validator.validate({1, 15, 27}, classifier)
+       print(f"Accuracy: {accuracy:.3f} (Expected: ~0.949)")
+       
+       if abs(accuracy - 0.949) < 0.05:
+           print("Test PASSED - Accuracy within expected range")
+       else:
+           print("Test result differs from expected value")
+           
+   except FileNotFoundError:
+       print("Large dataset not found. Please ensure large_dataset.txt exists.")
+   except Exception as e:
+       print(f"Error testing large dataset: {e}")
+
+def main():
+    #main entry point for the feature selection application
+    print("Welcome to Harit Talwar and Daniela Cruz Feature Selection Algorithm.")
+    
+    #option to test classifier first
+    test_choice = input("Do you want to test the classifier first? (y/n): ").lower()
+    if test_choice == 'y':
+        test_classifier()
         return
     
-    #choice of algorithm
-    print("Type the number of the algorithm you want to run.")
+    #get dataset file or run part one
+    dataset_choice = input("Use real dataset? (y/n - n for Part I dummy evaluation): ").lower()
+    
+    if dataset_choice == 'n':
+        #dummy evaluation
+        try:
+            num_features = int(input("Please enter total number of features: "))
+            if num_features <= 0:
+                print("Number of features must be positive!")
+                return
+        except ValueError:
+            print("Please enter a valid number!")
+            return
+        
+        searcher = FeatureSearcher(num_features)
+        
+    else:
+        #real evaluation
+        filename = input("Enter dataset filename: ")
+        
+        try:
+            start_time = time.time()
+            print("Loading and normalizing data...")
+            features, labels = load_dataset(filename)
+            features = normalize_features(features)
+            load_time = time.time() - start_time
+            print(f"Data loaded in {load_time:.2f} seconds")
+            
+            num_features = features.shape[1]
+            print(f"Dataset has {len(labels)} instances and {num_features} features")
+            
+            #validator and classifier
+            validator = LeaveOneOutValidator(features, labels)
+            classifier = NearestNeighborClassifier()
+            
+            #searcher with real evaluation
+            searcher = FeatureSearcher(num_features)
+            searcher.set_real_evaluation(validator, classifier)
+            
+        except Exception as e:
+            print(f"Error loading dataset: {e}")
+            return
+    
+  # choose
+    print("\nType the number of the algorithm you want to run.")
     print("1 Forward Selection")
     print("2 Backward Elimination")
     
     choice = input().strip()
     
-    #searcher with dummy evaluation - part one
-    searcher = FeatureSearcher(num_features)
-    
+    start_time = time.time()
     if choice == "1":
-        searcher.forward_selection()
+        best_features, best_accuracy = searcher.forward_selection()
     elif choice == "2":
-        searcher.backward_elimination()
+        best_features, best_accuracy = searcher.backward_elimination()
     else:
         print("Invalid choice! Please enter 1 or 2.")
+        return
+    
+    search_time = time.time() - start_time
+    print(f"\nSearch completed in {search_time:.2f} seconds")
 
 if __name__ == "__main__":
     main()

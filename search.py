@@ -109,3 +109,12 @@ class FeatureSearcher:
         
         print(f"Search finished! The best subset of features is {{{','.join(map(str, sorted(best_overall_features)))}}}, which has an accuracy of {best_overall_accuracy:.1%}")
         return best_overall_features, best_overall_accuracy
+
+    def set_real_evaluation(self, validator, classifier):
+        #set up real evaluation function using leave-one-out validation
+        def real_eval(feature_subset):
+            if not feature_subset:  #empty set
+                return 0.0
+            return validator.validate(feature_subset, classifier)
+        
+        self.evaluation_function = real_eval
