@@ -1,29 +1,27 @@
-#search.py
+# Search.py
 
-#featurre search algorithm
-#forward selection
-#backwards elimination
+# Feature search algorithm
+# Forward selection
+# Backwards elimination
 
-#main ideas:
+# Main ideas:
 
-# feature search = find optimal subset of features that gives best performance for model
-# forward selection = star with empty SET of featuires, iteratively add one feature at a time, for each iteration - try adding each
+# Feature search = find optimal subset of features that gives best performance for model
+# Forward selection = star with empty SET of featuires, iteratively add one feature at a time, for each iteration - try adding each
 # remaining feature and evaluate performance. keep the one that gives the best improvement. continue until no further improvement is possible.
 
-#backwards elimination= opposite of forward selection, start with all features, iteratively remove instead of add, least decrease in performance
-#continue until removing more features hurts performance
+# Backwards elimination= opposite of forward selection, start with all features, iteratively remove instead of add, least decrease in performance
+# continue until removing more features hurts performance
 
-#handle feature search algorithm here
+#Handle feature search algorithm here
 
 import random
 from typing import Set, Tuple
 
 class FeatureSearcher:
 
-    #take number of features + optimal evaluation function
-    #dummy evaluation function = random accuracy (set up for testing)
-    #start wuth no features
-    #try adding available feature one by one, keep track of best, return best + accuracy
+    # Take number of features + optimal evaluation function
+    # Dummy evaluation function = random accuracy (set up for testing)
     
     def __init__(self, num_features: int, evaluation_function=None):
         self.num_features = num_features
@@ -33,31 +31,38 @@ class FeatureSearcher:
         #random accuracy
         return random.uniform(0.0, 1.0)
     
+
+    # Forward Selection
+    # Starts with no features; tries adding available features one by one, keeps track of best, returns best track and its accuracy
     def forward_selection(self) -> Tuple[Set[int], float]:
         print("Using no features and \"random\" evaluation, I get an accuracy of")
         current_features = set()
         baseline_accuracy = self.evaluation_function(current_features)
         print(f"{baseline_accuracy:.1%} Beginning search.\n")
         
+        # Empty features set 
         best_features = set()
         best_accuracy = baseline_accuracy
+        # Create set for all available features
         available_features = set(range(1, self.num_features + 1))
         
+        # While we still have features that can be tested
         while available_features:
             best_feature_add = None
             best_accuracy = -1
             
-            #attempt tp add each remaining feature
+            # Attempt to add each remaining feature
             for feature in available_features:
                 test_features = current_features | {feature}
                 accuracy = self.evaluation_function(test_features)
                 print(f"Using feature(s) {{{','.join(map(str, sorted(test_features)))}}} accuracy is {accuracy:.1%}")
                 
+                # Check which feature gives the best accuracy and overall accuracy
                 if accuracy > best_accuracy:
                     best_accuracy = accuracy
                     best_feature_add = feature
             
-            #see if adding best feature improves accuracy or not
+            # See if adding best feature improves accuracy or not
             if best_accuracy > best_accuracy:
                 current_features.add(best_feature_add)
                 available_features.remove(best_feature_add)
@@ -65,13 +70,15 @@ class FeatureSearcher:
                 best_accuracy = best_accuracy
                 print(f"Feature set {{{','.join(map(str, sorted(current_features)))}}} was best, accuracy is {best_accuracy:.1%}\n")
             else:
+                # Stop searching if no improvement in overall performance found 
                 print("(Warning: Decreased accuracy!)")
                 break
         
         print(f"Search finished! The best subset of features is {{{','.join(map(str, sorted(best_features)))}}}, which has an accuracy of {best_accuracy:.1%}")
         return best_features, best_accuracy
     
-    #backwards elimination:
+    # Backwards Elimination:
+    # Start with all features; iteratively remove the features that have the least performance improvement
     
     def backward_elimination(self) -> Tuple[Set[int], float]:
         """Implement Backward Elimination algorithm"""
@@ -80,30 +87,34 @@ class FeatureSearcher:
         baseline_accuracy = self.evaluation_function(current_features)
         print(f"{baseline_accuracy:.1%} Beginning search.\n")
         
+        # Track variables
         best_features = current_features.copy()
         best_accuracy = baseline_accuracy
         
+        # While we have at least 1 feature, continue looking for best accuracy in that iteration
         while len(current_features) > 1:
             best_feature_remove = None
             best_accuracy = -1
             
-            #try removing each feature
+            # Try removing each feature, one at a time
             for feature in current_features:
                 test_features = current_features - {feature}
                 accuracy = self.evaluation_function(test_features)
                 print(f"Using feature(s) {{{','.join(map(str, sorted(test_features)))}}} accuracy is {accuracy:.1%}")
                 
+                # Keep track of best performance
                 if accuracy > best_accuracy:
                     best_accuracy = accuracy
                     best_feature_remove = feature
             
-            #check if removing the feature improves accuracy
+            # Check if removing the feature improves accuracy
             if best_accuracy > best_accuracy:
                 current_features.remove(best_feature_remove)
                 best_features = current_features.copy()
                 best_accuracy = best_accuracy
                 print(f"Feature set {{{','.join(map(str, sorted(current_features)))}}} was best, accuracy is {best_accuracy:.1%}\n")
             else:
+                # Stop searching if no improvement in overall performance found 
                 print("(Warning: Decreased accuracy!)")
                 break
         
@@ -111,10 +122,11 @@ class FeatureSearcher:
         return best_features, best_accuracy
 
     def set_real_evaluation(self, validator, classifier):
-        #set up real evaluation function using leave-one-out validation
+        # Set up real evaluation function using leave-one-out validation
         def real_eval(feature_subset):
             if not feature_subset:  #empty set
                 return 0.0
             return validator.validate(feature_subset, classifier)
         
+        # Swap evaluation function with real one
         self.evaluation_function = real_eval
