@@ -130,10 +130,10 @@ class LeaveOneOutValidator:
 
 
 def test_classifier():
-   """Test the classifier and validator on provided datasets"""
+   #test classifier and validator
    print("Testing classifier and validator...")
    
-   # Test small dataset
+   #test small dataset
    print("\nTesting small dataset with features {3, 5, 7}:")
    try:
        features, labels = load_dataset('small_dataset.txt')
@@ -155,7 +155,7 @@ def test_classifier():
    except Exception as e:
        print(f"Error testing small dataset: {e}")
    
-   # Test large dataset
+    #test large dataset
    print("\nTesting large dataset with features {1, 15, 27}:")
    try:
        features, labels = load_dataset('large_dataset.txt')
