@@ -102,25 +102,25 @@ class FeatureSearcher:
         if verbose:
             print("Starting with all features and evaluation function, I get an accuracy of", end=" ")
         
-        current_features = set(range(1, self.num_features + 1))
-        baseline_accuracy = self.evaluation_function(current_features)
+        chosen_features = set(range(1, self.num_features + 1))
+        baseline_accuracy = self.evaluation_function(chosen_features)
         
         if verbose:
             print(f"{baseline_accuracy:.1%}")
             print("Beginning search.\n")
         
         #track variables
-        best_overall_features = current_features.copy()
+        best_overall_features = chosen_features.copy()
         best_overall_accuracy = baseline_accuracy
         
         #while we have at least 1 feature, continue looking for best accuracy in that iteration
-        while len(current_features) > 1:
+        while len(chosen_features) > 1:
             best_feature_to_remove = None
             best_accuracy = -1
             
             #try removing each feature
-            for feature in current_features.copy():
-                test_features = current_features - {feature}
+            for feature in chosen_features.copy():
+                test_features = chosen_features - {feature}
                 accuracy = self.evaluation_function(test_features)
                 if verbose:
                     print(f"Using feature(s) {{{','.join(map(str, sorted(test_features)))}}} accuracy is {accuracy:.1%}")
@@ -131,13 +131,13 @@ class FeatureSearcher:
             
             #check ifremoving the feature improves overall accuracy
             if best_accuracy > best_overall_accuracy:
-                current_features.remove(best_feature_to_remove)
-                best_overall_features = current_features.copy()
+                chosen_features.remove(best_feature_to_remove)
+                best_overall_features = chosen_features.copy()
                 best_overall_accuracy = best_accuracy
                 
                 if verbose:
-                    if current_features:
-                        features_str = ','.join(map(str, sorted(current_features)))
+                    if chosen_features:
+                        features_str = ','.join(map(str, sorted(chosen_features)))
                         print(f"Feature set {{{features_str}}} was best, accuracy is {best_accuracy:.1%}\n")
                     else:
                         print(f"Empty feature set was best, accuracy is {best_accuracy:.1%}\n")
