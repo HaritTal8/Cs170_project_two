@@ -1,9 +1,5 @@
-#mainpy
-
-#feature selection algorithm
-#Harit Talwar, Dani Cruz
-
-from search import FeatureSearcher
+# Feature Selection Algorithm
+# Harit Talwar, Dani Cruz
 
 import numpy as np
 import time
@@ -46,7 +42,7 @@ def load_dataset(filename: str) -> Tuple[np.ndarray, np.ndarray]:
     return features, labels
 
 def normalize_features(features: np.ndarray) -> np.ndarray:
-    #features have to be normalized
+    # Features have to be normalized (set mean to 0 and standard deviation to 1)
     mean = np.mean(features, axis=0)
     std = np.std(features, axis=0)
     # Avoid division by zero for constant features
@@ -54,7 +50,7 @@ def normalize_features(features: np.ndarray) -> np.ndarray:
     return (features - mean) / std
 
 def euclidean_distance(point1: np.ndarray, point2: np.ndarray) -> float:
-    #euclidean distance
+    # Euclidean distance between vectors
     return np.sqrt(np.sum((point1 - point2) ** 2))
 
 class NearestNeighborClassifier:
@@ -70,9 +66,9 @@ class NearestNeighborClassifier:
         self.training_labels = None
         
     def train(self, features: np.ndarray, labels: np.ndarray, feature_subset: Set[int] = None):
-        #train classifier
+        # Train classifier
         
-        #features: training feature vectors (normalized)
+        # Features: training feature vectors (normalized)
         #labels: training class labels
         #feature_subset: Set of feature indices to use (1-indexed), if None use all
         if feature_subset is not None:
@@ -125,22 +121,22 @@ class LeaveOneOutValidator:
         self.validation_count += 1  # Add this line
         correct_predictions = 0
         
-        #1-indexed to 0-indexed
+        # 1-indexed to 0-indexed
         feature_indices = [i-1 for i in feature_subset]
         
         for i in range(self.num_instances):
-            #training set (all instances except i)
+            # Training set (all instances except i)
             train_indices = list(range(self.num_instances))
             train_indices.remove(i)
             
             train_features = self.features[train_indices]
             train_labels = self.labels[train_indices]
             
-            #test instance
+            # Test instance
             test_features = self.features[i, feature_indices]
             true_label = self.labels[i]
             
-            #classifier makes prediction from train
+            # Classifier makes prediction from train
             classifier.train(train_features, train_labels, feature_subset)
             predicted_label = classifier.test(test_features)
             
@@ -160,10 +156,12 @@ class LeaveOneOutValidator:
 
 
 def test_classifier():
-   #test classifier and validator
+   # Compute tests in large and small datasets to test accuracy
+
+   # Test classifier and validator
    print("Testing classifier and validator...")
    
-   #test small dataset
+   # Test small dataset
    print("\nTesting small dataset with features {3, 5, 7}:")
    try:
        features, labels = load_dataset('small_dataset.txt')
@@ -185,7 +183,7 @@ def test_classifier():
    except Exception as e:
        print(f"Error testing small dataset: {e}")
    
-    #test large dataset
+    # Test large dataset
    print("\nTesting large dataset with features {1, 15, 27}:")
    try:
        features, labels = load_dataset('large_dataset.txt')
