@@ -28,6 +28,7 @@ class FeatureSearcher:
         self.evaluation_function = evaluation_function or self._dummy_evaluation
     
     def _dummy_evaluation(self, feature_subset: Set[int]) -> float:
+        # Utilized for part 1 when using the stub evaluation function
         #random accuracy
         return random.uniform(0.0, 1.0)
     
