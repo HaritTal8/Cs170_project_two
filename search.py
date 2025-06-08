@@ -20,8 +20,8 @@ from typing import Set, Tuple
 
 class FeatureSearcher:
 
-    # Take number of features + optimal evaluation function
-    # Dummy evaluation function = random accuracy (set up for testing)
+    #take number of features + optimal evaluation function
+    #dummy evaluation function = random accuracy (set up for testing)
     
     def __init__(self, num_features: int, evaluation_function=None):
         self.num_features = num_features
@@ -45,19 +45,19 @@ class FeatureSearcher:
             print(f"{baseline_accuracy:.1%}")
             print("Beginning search.\n")
         
-        # Empty features set
+        #empty features set
         best_overall_features = set()
         best_overall_accuracy = baseline_accuracy
 
-        # Create set for all available features
+        #create set for all available features
         available_features = set(range(1, self.num_features + 1))
         
-        # While we still have features that can be tested
+        #while we still have features that can be tested
         while available_features:
             best_feature_to_add = None
             best_accuracy = -1
             
-            # Attempt adding each remaining feature
+            #attempt adding each remaining feature
             for feature in available_features:
                 test_features = current_features | {feature}
                 accuracy = self.evaluation_function(test_features)
@@ -66,7 +66,7 @@ class FeatureSearcher:
                     features_str = ','.join(map(str, sorted(test_features)))
                     print(f"Using feature(s) {{{features_str}}} accuracy is {accuracy:.1%}")
                 
-                # Check which feature gives the best accuracy and overall accuracy
+                #check which feature gives the best accuracy and overall accuracy
                 if accuracy > best_accuracy:
                     best_accuracy = accuracy
                     best_feature_to_add = feature
@@ -108,16 +108,16 @@ class FeatureSearcher:
             print(f"{baseline_accuracy:.1%}")
             print("Beginning search.\n")
         
-        # Track variables
+        #track variables
         best_overall_features = current_features.copy()
         best_overall_accuracy = baseline_accuracy
         
-         # While we have at least 1 feature, continue looking for best accuracy in that iteration
+        #while we have at least 1 feature, continue looking for best accuracy in that iteration
         while len(current_features) > 1:
             best_feature_to_remove = None
             best_accuracy = -1
             
-            # Try removing each feature
+            #try removing each feature
             for feature in current_features.copy():
                 test_features = current_features - {feature}
                 accuracy = self.evaluation_function(test_features)
