@@ -112,31 +112,31 @@ class LeaveOneOutValidator:
         self.features = features
         self.labels = labels
         self.num_instances = len(labels)
-        self.validation_count = 0  # Add this line
+        self.validation_count = 0 
     
     def validate(self, feature_subset: Set[int], classifier) -> float:
         if not feature_subset:  #empty
             return 0.0
         
-        self.validation_count += 1  # Add this line
+        self.validation_count += 1 
         correct_predictions = 0
         
         # 1-indexed to 0-indexed
         feature_indices = [i-1 for i in feature_subset]
         
         for i in range(self.num_instances):
-            # Training set (all instances except i)
+            #training set (all instances except i)
             train_indices = list(range(self.num_instances))
             train_indices.remove(i)
             
             train_features = self.features[train_indices]
             train_labels = self.labels[train_indices]
             
-            # Test instance
+            #test instance
             test_features = self.features[i, feature_indices]
             true_label = self.labels[i]
             
-            # Classifier makes prediction from train
+                #classifier makes prediction from train
             classifier.train(train_features, train_labels, feature_subset)
             predicted_label = classifier.test(test_features)
             
@@ -156,12 +156,12 @@ class LeaveOneOutValidator:
 
 
 def test_classifier():
-   # Compute tests in large and small datasets to test accuracy
+   #compute tests in large and small datasets to test accuracy
 
-   # Test classifier and validator
+   #test classifier and validator
    print("Testing classifier and validator...")
    
-   # Test small dataset
+   #test small dataset
    print("\nTesting small dataset with features {3, 5, 7}:")
    try:
        features, labels = load_dataset('small_dataset.txt')
@@ -183,7 +183,7 @@ def test_classifier():
    except Exception as e:
        print(f"Error testing small dataset: {e}")
    
-    # Test large dataset
+   #test large dataset
    print("\nTesting large dataset with features {1, 15, 27}:")
    try:
        features, labels = load_dataset('large_dataset.txt')
