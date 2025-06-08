@@ -33,12 +33,19 @@ class FeatureSearcher:
         #random accuracy
         return random.uniform(0.0, 1.0)
     
-    def forward_selection(self) -> Tuple[Set[int], float]:
+    def forward_selection(self, verbose: bool = True) -> Tuple[Set[int], float]:
         #forward selection
-        print("Using no features and \"random\" evaluation, I get an accuracy of")
+        #start with empty set, iteratively add best feature
+
+        if verbose:
+            print("Using no features and evaluation function, I get an accuracy of", end=" ")
+        
         current_features = set()
         baseline_accuracy = self.evaluation_function(current_features)
-        print(f"{baseline_accuracy:.1%} Beginning search.\n")
+        
+        if verbose:
+            print(f"{baseline_accuracy:.1%}")
+            print("Beginning search.\n")
         
         best_overall_features = set()
         best_overall_accuracy = baseline_accuracy
@@ -52,33 +59,51 @@ class FeatureSearcher:
             for feature in available_features:
                 test_features = current_features | {feature}
                 accuracy = self.evaluation_function(test_features)
-                print(f"Using feature(s) {{{','.join(map(str, sorted(test_features)))}}} accuracy is {accuracy:.1%}")
+                
+                if verbose:
+                    features_str = ','.join(map(str, sorted(test_features)))
+                    print(f"Using feature(s) {{{features_str}}} accuracy is {accuracy:.1%}")
                 
                 if accuracy > best_accuracy:
                     best_accuracy = accuracy
                     best_feature_to_add = feature
             
-            # Check if adding the best feature improves OVERALL accuracy
+            #check if adding the best feature improves overall accuracy
             if best_accuracy > best_overall_accuracy:
                 current_features.add(best_feature_to_add)
                 available_features.remove(best_feature_to_add)
                 best_overall_features = current_features.copy()
                 best_overall_accuracy = best_accuracy
-                print(f"Feature set {{{','.join(map(str, sorted(current_features)))}}} was best, accuracy is {best_accuracy:.1%}\n")
+                
+                if verbose:
+                    features_str = ','.join(map(str, sorted(current_features)))
+                    print(f"Feature set {{{features_str}}} was best, accuracy is {best_accuracy:.1%}\n")
             else:
-                print("(Warning: Decreased accuracy!)")
+                if verbose:
+                    print("(Warning: Accuracy has decreased! Stopping search.)")
                 break
         
-        print(f"Search finished! The best subset of features is {{{','.join(map(str, sorted(best_overall_features)))}}}, which has an accuracy of {best_overall_accuracy:.1%}")
-        return best_overall_features, best_overall_accuracy
+        if verbose:
+            features_str = ','.join(map(str, sorted(best_overall_features)))
+            print(f"Search finished! The best feature subset is {{{features_str}}}, "
+                f"which has an accuracy of {best_overall_accuracy:.1%}")
         
-    #backwards elimination:
-    
-    def backward_elimination(self) -> Tuple[Set[int], float]:
-        print("Starting with all features and \"random\" evaluation, I get an accuracy of")
+        return best_overall_features, best_overall_accuracy
+
+    def backward_elimination(self, verbose: bool = True) -> Tuple[Set[int], float]:
+        #backeards elimination
+        #start with all features, iteratively remove worst feature
+        #continue until removing more features hurts performance
+
+        if verbose:
+            print("Starting with all features and evaluation function, I get an accuracy of", end=" ")
+        
         current_features = set(range(1, self.num_features + 1))
         baseline_accuracy = self.evaluation_function(current_features)
-        print(f"{baseline_accuracy:.1%} Beginning search.\n")
+        
+        if verbose:
+            print(f"{baseline_accuracy:.1%}")
+            print("Beginning search.\n")
         
         best_overall_features = current_features.copy()
         best_overall_accuracy = baseline_accuracy
@@ -88,28 +113,48 @@ class FeatureSearcher:
             best_accuracy = -1
             
             # Try removing each feature
-            for feature in current_features:
+            for feature in current_features.copy():
                 test_features = current_features - {feature}
                 accuracy = self.evaluation_function(test_features)
-                print(f"Using feature(s) {{{','.join(map(str, sorted(test_features)))}}} accuracy is {accuracy:.1%}")
+                
+                if verbose:
+                    if test_features:
+                        features_str = ','.join(map(str, sorted(test_features)))
+                        print(f"Using feature(s) {{{features_str}}} accuracy is {accuracy:.1%}")
+                    else:
+                        print(f"Using no features, accuracy is {accuracy:.1%}")
                 
                 if accuracy > best_accuracy:
                     best_accuracy = accuracy
                     best_feature_to_remove = feature
             
-            # Check if removing the feature improves OVERALL accuracy
+            #check ifremoving the feature improves overall accuracy
             if best_accuracy > best_overall_accuracy:
-                current_features.remove(best_feature_to_remove)  # UPDATE current_features
+                current_features.remove(best_feature_to_remove)
                 best_overall_features = current_features.copy()
                 best_overall_accuracy = best_accuracy
-                print(f"Feature set {{{','.join(map(str, sorted(current_features)))}}} was best, accuracy is {best_accuracy:.1%}\n")
+                
+                if verbose:
+                    if current_features:
+                        features_str = ','.join(map(str, sorted(current_features)))
+                        print(f"Feature set {{{features_str}}} was best, accuracy is {best_accuracy:.1%}\n")
+                    else:
+                        print(f"Empty feature set was best, accuracy is {best_accuracy:.1%}\n")
             else:
-                print("(Warning: Decreased accuracy!)")
+                if verbose:
+                    print("(Warning: Accuracy has decreased! Stopping search.)")
                 break
         
-        print(f"Search finished! The best subset of features is {{{','.join(map(str, sorted(best_overall_features)))}}}, which has an accuracy of {best_overall_accuracy:.1%}")
+        if verbose:
+            if best_overall_features:
+                features_str = ','.join(map(str, sorted(best_overall_features)))
+                print(f"Search finished! The best feature subset is {{{features_str}}}, "
+                      f"which has an accuracy of {best_overall_accuracy:.1%}")
+            else:
+                print(f"Search finished! The best feature subset is empty, "
+                      f"which has an accuracy of {best_overall_accuracy:.1%}")
+        
         return best_overall_features, best_overall_accuracy
-
 
     def set_real_evaluation(self, validator, classifier):
         #set up real evaluation function using leave-one-out validation
@@ -119,3 +164,15 @@ class FeatureSearcher:
             return validator.validate(feature_subset, classifier)
         
         self.evaluation_function = real_eval
+
+    def get_final_accuracy(self) -> float:
+        """Get the final accuracy from the last search."""
+        if hasattr(self, 'search_history') and self.search_history:
+            return self.search_history[-1]['accuracy']
+        return 0.0
+
+    def get_total_evaluations(self) -> int:
+        """Get total number of feature subset evaluations performed."""
+        if hasattr(self, 'search_history'):
+            return sum(len(step.get('all_tested', [])) for step in self.search_history)
+        return 0

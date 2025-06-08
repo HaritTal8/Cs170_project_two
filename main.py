@@ -9,23 +9,39 @@ import numpy as np
 import time
 from typing import Tuple, Set
 from search import FeatureSearcher
+import os
 
 def load_dataset(filename: str) -> Tuple[np.ndarray, np.ndarray]:
-    #load datasets that are given
+    """
+    Load datasets in the expected format.
+    Enhanced to handle both space-separated and other formats.
+    """
     data = []
     try:
         with open(filename, 'r') as f:
             for line in f:
-                values = list(map(float, line.strip().split()))
-                data.append(values)
+                line = line.strip()
+                if line:  # Skip empty lines
+                    # Handle both space-separated and comma-separated
+                    if ',' in line:
+                        values = [float(x.strip()) for x in line.split(',') if x.strip()]
+                    else:
+                        # Split by multiple spaces (as in your current format)
+                        values = [float(x) for x in line.split() if x]
+                    
+                    if values:  # Only add non-empty rows
+                        data.append(values)
     except FileNotFoundError:
         raise FileNotFoundError(f"Dataset file '{filename}' not found.")
-    except ValueError:
-        raise ValueError("Invalid data format in dataset file.")
+    except ValueError as e:
+        raise ValueError(f"Invalid data format in dataset file: {e}")
+    
+    if not data:
+        raise ValueError("Dataset file is empty.")
     
     data = np.array(data)
-    labels = data[:, 0].astype(int)  #class first column
-    features = data[:, 1:]  #features
+    labels = data[:, 0].astype(int)  # Class labels in first column
+    features = data[:, 1:]  # Features in remaining columns
     
     return features, labels
 
@@ -42,9 +58,14 @@ def euclidean_distance(point1: np.ndarray, point2: np.ndarray) -> float:
     return np.sqrt(np.sum((point1 - point2) ** 2))
 
 class NearestNeighborClassifier:
-    #nearest neighbor classifier
+    #nearest neighbor classifier supporting both nn (k=1) and knn (k>1)
+    #enhanced version that supports different k values as required in part iii
     
-    def __init__(self):
+    def __init__(self, k: int = 1):
+        #initialize classifier
+        
+        #k: number of neighbors to consider (default=1 for nn)
+        self.k = k
         self.training_features = None
         self.training_labels = None
         
@@ -64,44 +85,44 @@ class NearestNeighborClassifier:
         self.training_labels = labels
     
     def test(self, test_instance: np.ndarray) -> int:
-        #classify test
-        #predict class label via nearest neighbor and feature vector of test instance
+        #optimized test method with vectorized distance calculation
         if self.training_features is None:
             raise ValueError("Classifier must be trained before testing")
         
-        min_distance = float('inf')
-        nearest_label = None
+        #vectorized distance calculation for better performance
+        distances = np.sqrt(np.sum((self.training_features - test_instance) ** 2, axis=1))
         
-        #nearest training instance
-        for i, training_instance in enumerate(self.training_features):
-            distance = euclidean_distance(test_instance, training_instance)
-            if distance < min_distance:
-                min_distance = distance
-                nearest_label = self.training_labels[i]
+        #get k nearest neighbors indices
+        k_nearest_indices = np.argpartition(distances, min(self.k-1, len(distances)-1))[:self.k]
         
-        return nearest_label
+        if self.k == 1:
+            return self.training_labels[k_nearest_indices[0]]
+        
+        #majority voting for k > 1
+        k_nearest_labels = self.training_labels[k_nearest_indices]
+        unique_labels, counts = np.unique(k_nearest_labels, return_counts=True)
+        return unique_labels[np.argmax(counts)]
+    
+    def set_k(self, k: int):
+        #change the k value for the classifier
+        
+        #k: new k value
+        self.k = k
+
+
     
 class LeaveOneOutValidator:
-    #leave one out cross validation for classifier evaluation
-    
     def __init__(self, features: np.ndarray, labels: np.ndarray):
-        #initialize validator with dataset
-        
-        #features: matrix (normalized)
-        #labels: class labels
-
         self.features = features
         self.labels = labels
         self.num_instances = len(labels)
+        self.validation_count = 0  # Add this line
     
-    def validate(self, feature_subset: Set[int], classifier: NearestNeighborClassifier) -> float:
-        #leave on out validation
-        #feature_subset: set of feature indices to use (1-indexed)
-        #classifier: classifier to evaluate
-        #returned accuracy between 0 and 1
+    def validate(self, feature_subset: Set[int], classifier) -> float:
         if not feature_subset:  #empty
             return 0.0
-            
+        
+        self.validation_count += 1  # Add this line
         correct_predictions = 0
         
         #1-indexed to 0-indexed
@@ -127,6 +148,15 @@ class LeaveOneOutValidator:
                 correct_predictions += 1
         
         return correct_predictions / self.num_instances
+    
+    def reset_validation_count(self):
+        #reset the validation counter for new runs
+        self.validation_count = 0
+    
+    def get_validation_count(self) -> int:
+        #get the number of validations performed
+        return self.validation_count
+
 
 
 def test_classifier():
@@ -178,20 +208,22 @@ def test_classifier():
        print(f"Error testing large dataset: {e}")
 
 def main():
-    #main entry point for the feature selection application
+    #part three requirements added
     print("Welcome to Harit Talwar and Daniela Cruz Feature Selection Algorithm.")
+    print("Part III: Complete Implementation with Real Datasets\n")
     
     #option to test classifier first
-    test_choice = input("Do you want to test the classifier first? (y/n): ").lower()
+    test_choice = input("Do you want to test the classifier first? (y/n): ").lower().strip()
     if test_choice == 'y':
-        test_classifier()
-        return
+        test_classifier_comprehensive()
+        print("\nTesting complete.\n")
     
-    #get dataset file or run part one
-    dataset_choice = input("Use real dataset? (y/n - n for Part I dummy evaluation): ").lower()
+    #get dataset choice
+    dataset_choice = input("Use real dataset? (y/n - n for Part I dummy evaluation): ").lower().strip()
     
     if dataset_choice == 'n':
-        #dummy evaluation
+        # Part I: dummy evaluation
+        print("\n=== Part I: Testing Search Algorithm Structure ===")
         try:
             num_features = int(input("Please enter total number of features: "))
             if num_features <= 0:
@@ -203,51 +235,162 @@ def main():
         
         searcher = FeatureSearcher(num_features)
         
+        print("\nType the number of the algorithm you want to run.")
+        print("1. Forward Selection")
+        print("2. Backward Elimination")
+        
+        choice = input("Choice: ").strip()
+        if choice not in ["1", "2"]:
+            print("Invalid choice! Please enter 1 or 2.")
+            return
+        
+        run_feature_search_with_timing(searcher, choice, f"Dummy Dataset ({num_features} features)")
+        
     else:
-        #real evaluation
+        # Part III: real evaluation
+        print("\n=== Part III: Real Dataset Analysis ===")
         filename = input("Enter dataset filename: ")
         
+        if not os.path.exists(filename):
+            print(f"Error: File '{filename}' not found.")
+            return
+        
         try:
-            start_time = time.time()
+            #load and preprocess data
             print("Loading and normalizing data...")
+            start_time = time.time()
             features, labels = load_dataset(filename)
             features = normalize_features(features)
             load_time = time.time() - start_time
+            
             print(f"Data loaded in {load_time:.2f} seconds")
+            print(f"This dataset has {features.shape[1]} features (not including the class attribute), "
+                  f"with {len(labels)} instances.")
+            print("Please wait while I normalize the data... Done!")
             
-            num_features = features.shape[1]
-            print(f"Dataset has {len(labels)} instances and {num_features} features")
-            
-            #validator and classifier
+                #set up validator
             validator = LeaveOneOutValidator(features, labels)
-            classifier = NearestNeighborClassifier()
             
-            #searcher with real evaluation
-            searcher = FeatureSearcher(num_features)
-            searcher.set_real_evaluation(validator, classifier)
+            #run both algorithms and compare results
+            print("\n=== Running Both Algorithms for Comparison ===")
+            
+            results = {}
+            k_values = [1, 3, 5, 7]  # Part III requirement
+            
+            for k in k_values:
+                print(f"\n--- Testing with k={k} ---")
+                classifier = NearestNeighborClassifier(k=k)
+                searcher = FeatureSearcher(features.shape[1])
+                searcher.set_real_evaluation(validator, classifier)
+                
+                #forward selection
+                print(f"\nForward Selection (k={k}):")
+                validator.reset_validation_count()
+                start_time = time.time()
+                forward_features, forward_acc = searcher.forward_selection(verbose=True)
+                forward_time = time.time() - start_time
+                forward_validations = validator.get_validation_count()
+                
+                #backward elimination
+                print(f"\nBackward Elimination (k={k}):")
+                validator.reset_validation_count()
+                start_time = time.time()
+                backward_features, backward_acc = searcher.backward_elimination(verbose=True)
+                backward_time = time.time() - start_time
+                backward_validations = validator.get_validation_count()
+                
+                #store results
+                results[k] = {
+                    'forward': {
+                        'features': forward_features,
+                        'accuracy': forward_acc,
+                        'time': forward_time,
+                        'validations': forward_validations
+                    },
+                    'backward': {
+                        'features': backward_features,
+                        'accuracy': backward_acc,
+                        'time': backward_time,
+                        'validations': backward_validations
+                    }
+                }
+            
+            #print results summary
+            print_comprehensive_results(results, filename)
             
         except Exception as e:
-            print(f"Error loading dataset: {e}")
+            print(f"Error processing dataset: {e}")
             return
+
+def print_comprehensive_results(results: dict, filename: str):
+
+    #print comprehensive results
+    print(f"\n{'='*60}")
+    print(f"COMPREHENSIVE RESULTS SUMMARY FOR {filename.upper()}")
+    print(f"{'='*60}")
     
-  # choose
-    print("\nType the number of the algorithm you want to run.")
-    print("1 Forward Selection")
-    print("2 Backward Elimination")
+    print("\n--- ALGORITHM COMPARISON ---")
+    for k in sorted(results.keys()):
+        print(f"\nk = {k}:")
+        forward = results[k]['forward']
+        backward = results[k]['backward']
+        
+        print(f"  Forward Selection:")
+        features_str = ','.join(map(str, sorted(forward['features']))) if forward['features'] else 'None'
+        print(f"    Features: {{{features_str}}}")
+        print(f"    Accuracy: {forward['accuracy']:.1%}")
+        print(f"    Time: {forward['time']:.2f}s")
+        print(f"    Validations: {forward['validations']}")
+        
+        print(f"  Backward Elimination:")
+        features_str = ','.join(map(str, sorted(backward['features']))) if backward['features'] else 'None'
+        print(f"    Features: {{{features_str}}}")
+        print(f"    Accuracy: {backward['accuracy']:.1%}")
+        print(f"    Time: {backward['time']:.2f}s")
+        print(f"    Validations: {backward['validations']}")
     
-    choice = input().strip()
+    #find thebest overall results
+    print(f"\n--- BEST RESULTS ---")
+    best_forward = max(results.values(), key=lambda x: x['forward']['accuracy'])['forward']
+    best_backward = max(results.values(), key=lambda x: x['backward']['accuracy'])['backward']
     
-    start_time = time.time()
-    if choice == "1":
-        best_features, best_accuracy = searcher.forward_selection()
-    elif choice == "2":
-        best_features, best_accuracy = searcher.backward_elimination()
-    else:
-        print("Invalid choice! Please enter 1 or 2.")
-        return
+    print(f"Best Forward Selection:")
+    features_str = ','.join(map(str, sorted(best_forward['features']))) if best_forward['features'] else 'None'
+    print(f"  Features: {{{features_str}}}, Accuracy: {best_forward['accuracy']:.1%}")
     
-    search_time = time.time() - start_time
-    print(f"\nSearch completed in {search_time:.2f} seconds")
+    print(f"Best Backward Elimination:")
+    features_str = ','.join(map(str, sorted(best_backward['features']))) if best_backward['features'] else 'None'
+    print(f"  Features: {{{features_str}}}, Accuracy: {best_backward['accuracy']:.1%}")
+    
+    #knn comparison
+    print(f"\n--- KNN PERFORMANCE COMPARISON ---")
+    print("Algorithm\t\tk=1\t\tk=3\t\tk=5\t\tk=7")
+    print("-" * 50)
+    
+    forward_accs = [results[k]['forward']['accuracy'] for k in [1,3,5,7]]
+    backward_accs = [results[k]['backward']['accuracy'] for k in [1,3,5,7]]
+    
+    print(f"Forward\t\t\t{forward_accs[0]:.1%}\t\t{forward_accs[1]:.1%}\t\t{forward_accs[2]:.1%}\t\t{forward_accs[3]:.1%}")
+    print(f"Backward\t\t{backward_accs[0]:.1%}\t\t{backward_accs[1]:.1%}\t\t{backward_accs[2]:.1%}\t\t{backward_accs[3]:.1%}")
+
+    def generate_trace_output(results: dict, dataset_name: str):
+
+        #geneate trace output
+        print(f"\n{'='*60}")
+        print(f"TRACE OUTPUT FOR REPORT - {dataset_name.upper()}")
+        print(f"{'='*60}")
+        
+        for k in sorted(results.keys()):
+            print(f"\n{dataset_name} Results, k = {k}:")
+            
+            for algorithm in ['forward', 'backward']:
+                alg_name = "Forward Selection" if algorithm == 'forward' else "Backward Elimination"
+                result = results[k][algorithm]
+                
+                print(f"\n{alg_name}:")
+                features_str = ','.join(map(str, sorted(result['features']))) if result['features'] else 'None'
+                print(f"Feature Subset: {{{features_str}}}, Acc: {result['accuracy']:.1%}")
+
 
 if __name__ == "__main__":
     main()
