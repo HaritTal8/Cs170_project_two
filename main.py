@@ -62,8 +62,8 @@ class NearestNeighborClassifier:
         
         #k: number of neighbors to consider (default=1 for nn)
         self.k = k
-        self.training_features = None
-        self.training_labels = None
+        self.training_features = None # training data features 
+        self.training_labels = None # corresponding featurea
         
     def train(self, features: np.ndarray, labels: np.ndarray, feature_subset: Set[int] = None):
         # Train classifier
@@ -76,6 +76,7 @@ class NearestNeighborClassifier:
             feature_indices = [i-1 for i in feature_subset]
             self.training_features = features[:, feature_indices]
         else:
+            # no subsets, all features should be applied
             self.training_features = features
             
         self.training_labels = labels
@@ -109,21 +110,24 @@ class NearestNeighborClassifier:
     
 class LeaveOneOutValidator:
     def __init__(self, features: np.ndarray, labels: np.ndarray):
+        #store the dataset features in matrix
         self.features = features
         self.labels = labels
         self.num_instances = len(labels)
+        #track validations being run
         self.validation_count = 0 
     
     def validate(self, feature_subset: Set[int], classifier) -> float:
-        if not feature_subset:  #empty
+        if not feature_subset:  # if no features (empty), no predictions can be made
             return 0.0
         
         self.validation_count += 1 
         correct_predictions = 0
         
-        # 1-indexed to 0-indexed
+        # convert 1-indexed to 0-indexed
         feature_indices = [i-1 for i in feature_subset]
-        
+
+        # leave one out cross validation
         for i in range(self.num_instances):
             #training set (all instances except i)
             train_indices = list(range(self.num_instances))
@@ -132,14 +136,15 @@ class LeaveOneOutValidator:
             train_features = self.features[train_indices]
             train_labels = self.labels[train_indices]
             
-            #test instance
+            #test instance based on subset being evaluated
             test_features = self.features[i, feature_indices]
             true_label = self.labels[i]
             
-                #classifier makes prediction from train
+            #classifier makes prediction from train
             classifier.train(train_features, train_labels, feature_subset)
             predicted_label = classifier.test(test_features)
-            
+
+            #increase prediction count if true label is the same
             if predicted_label == true_label:
                 correct_predictions += 1
         
